@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SSE SharedWorker Demo</title>
+    <style>
+        :root {
+            --bg-top: #f6fbff;
+            --bg-bottom: #eef2ff;
+            --panel-bg: #ffffff;
+            --text: #182235;
+            --muted: #5f6f86;
+            --line: #dde6f4;
+            --primary: #1d6cff;
+            --primary-strong: #1056d8;
+            --danger: #d12f4c;
+            --danger-strong: #af243d;
+            --shadow: 0 18px 40px rgba(16, 49, 110, 0.1);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: "Pretendard", "SUIT", "Noto Sans KR", sans-serif;
+            background:
+                radial-gradient(circle at 10% 0%, rgba(71, 131, 255, 0.22), transparent 34%),
+                radial-gradient(circle at 95% 10%, rgba(103, 221, 189, 0.22), transparent 30%),
+                linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+            padding: 28px 18px 40px;
+        }
+
+        .page {
+            width: min(980px, 100%);
+            margin: 0 auto;
+        }
+
+        .hero {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius-lg);
+            padding: 22px 24px;
+            margin-bottom: 16px;
+        }
+
+        h2 {
+            margin: 0 0 8px;
+            font-size: 1.48rem;
+            letter-spacing: -0.01em;
+        }
+
+        .hero-note {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.5;
+            font-size: 0.94rem;
+        }
+
+        .box {
+            background: var(--panel-bg);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-top: 14px;
+            box-shadow: 0 8px 20px rgba(24, 34, 53, 0.06);
+        }
+
+        h3 {
+            margin: 0 0 14px;
+            font-size: 1.02rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h3::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: linear-gradient(140deg, #5ab4ff, #3f7cff);
+            box-shadow: 0 0 0 4px rgba(63, 124, 255, 0.16);
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        label {
+            font-size: 0.86rem;
+            color: #3e4e66;
+            font-weight: 600;
+            min-width: 62px;
+        }
+
+        input {
+            border: 1px solid #cad7ec;
+            background: #fdfdff;
+            border-radius: 10px;
+            padding: 9px 11px;
+            min-width: 140px;
+            color: var(--text);
+            font-size: 0.92rem;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(29, 108, 255, 0.12);
+        }
+
+        .input-message {
+            width: min(520px, 100%);
+        }
+
+        button {
+            border: 1px solid transparent;
+            border-radius: 10px;
+            padding: 8px 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+            transition: transform .12s ease, filter .2s ease;
+        }
+
+        button:hover {
+            filter: brightness(1.04);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(29, 108, 255, 0.18);
+        }
+
+        .btn-secondary {
+            background: #f3f7ff;
+            color: #2a426e;
+            border-color: #c4d5f3;
+        }
+
+        .btn-danger {
+            background: linear-gradient(140deg, var(--danger), var(--danger-strong));
+        }
+
+        #log {
+            white-space: pre-wrap;
+            background: #0f1b34;
+            color: #d9e4ff;
+            font-family: "JetBrains Mono", "D2Coding", "Consolas", monospace;
+            padding: 12px;
+            height: 340px;
+            overflow: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid #1c2c52;
+            line-height: 1.4;
+            font-size: 0.86rem;
+        }
+
+        #subs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 8px 5px 11px;
+            border: 1px solid #c8d6f0;
+            border-radius: 999px;
+            background: #f4f8ff;
+            color: #24466f;
+            font-size: 0.88rem;
+        }
+
+        .tag button {
+            padding: 0;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 0.74rem;
+            background: #fff;
+            color: #335279;
+            border: 1px solid #bdd0f1;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 0.83rem;
+            line-height: 1.45;
+        }
+
+        @media (max-width: 700px) {
+            body { padding: 18px 12px 28px; }
+            .hero { padding: 18px 16px; }
+            .box { padding: 14px; }
+            .row { margin-bottom: 12px; }
+            input { width: 100%; }
+            label { min-width: auto; }
+            .input-message { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <header class="hero">
+        <h2>SSE 데모 (SharedWorker: 단일 SSE 연결 공유)</h2>
+        <p class="hero-note">
+            같은 브라우저에서 여러 탭을 열어도 SSE 연결을 1개로 공유하고, 수신 메시지는 모든 탭에 브로드캐스트됩니다.
+            발신은 POST API로 테스트할 수 있습니다.
+        </p>
+    </header>
+
+    <div class="box">
+        <h3>1) SSE 연결/구독</h3>
+        <div class="row">
+            <label>clientId</label>
+            <input id="clientId" value="client-1" />
+            <label>topic</label>
+            <input id="topic" value="roomA" />
+            <button id="btnConnect">구독 추가(워커에 요청)</button>
+            <button id="btnDisconnectAll" class="btn-danger">워커 SSE 종료</button>
+        </div>
+        <div class="row">
+            <div>현재 구독 요청(topic):</div>
+            <div id="subs"></div>
+        </div>
+        <div class="muted">
+            * SharedWorker는 SSE 연결을 1개로 유지하고, 수신 이벤트를 모든 탭에 브로드캐스트합니다.
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>2) 발신(POST)</h3>
+        <div class="row">
+            <label>from</label>
+            <input id="from" value="상우님" />
+            <label>sendTopic</label>
+            <input id="sendTopic" value="roomA" />
+        </div>
+        <div class="row">
+            <label>message</label>
+            <input id="message" class="input-message" value="안녕하세요 SSE!" />
+            <button id="btnSend">발신 (/api/send)</button>
+            <button id="btnBroadcast" class="btn-secondary">브로드캐스트 (/api/broadcast)</button>
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>3) 수신 로그</h3>
+        <div class="row">
+            <button id="btnClear" class="btn-secondary">로그 지우기</button>
+        </div>
+        <div id="log"></div>
+    </div>
+</main>
+
+<script>
+    // =========================
+    // 유틸
+    // =========================
+    const logEl = document.getElementById('log');
+    const subsEl = document.getElementById('subs');
+
+    function log(line, isError = false) {
+        const now = new Date().toLocaleTimeString();
+        const prefix = isError ? "[ERR]" : "";
+        logEl.textContent += `[${now}]${prefix} ${line}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // =========================
+    // SharedWorker 연결
+    // =========================
+    let worker;
+    let subscribedTopics = new Set();
+
+    function initWorker() {
+        try {
+            worker = new SharedWorker("sse-shared-worker.js");
+            worker.port.start();
+
+            worker.port.onmessage = (event) => {
+                const msg = event.data;
+                // msg: {type, ...}
+                if (!msg || !msg.type) return;
+
+                switch (msg.type) {
+                    case "status":
+                        log(`[worker][status] ${msg.data}`);
+                        break;
+
+                    case "message":
+                        // { type:"message", topic, eventName, data }
+                        log(`[recv][${msg.topic || "-"}][${msg.eventName || "message"}] ${msg.data}`);
+                        break;
+
+                    case "error":
+                        log(`[worker][error] ${msg.data}`, true);
+                        break;
+
+                    default:
+                        log(`[worker][unknown] ${JSON.stringify(msg)}`);
+                }
+            };
+
+            log("SharedWorker 연결 완료");
+        } catch (e) {
+            log("SharedWorker를 지원하지 않는 브라우저이거나 로드 실패: " + e.message, true);
+        }
+    }
+
+    function renderTopics() {
+        subsEl.innerHTML = '';
+        [...subscribedTopics].forEach(topic => {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.innerHTML = `<strong>${topic}</strong>`;
+
+            const btn = document.createElement('button');
+            btn.textContent = 'X';
+            btn.onclick = () => removeTopic(topic);
+
+            tag.appendChild(btn);
+            subsEl.appendChild(tag);
+        });
+    }
+
+    // =========================
+    // 워커에 구독 추가/삭제 요청
+    // =========================
+    function addTopic() {
+        const clientId = document.getElementById("clientId").value.trim();
+        const topic = document.getElementById("topic").value.trim();
+
+        if (!worker) return log("워커가 초기화되지 않았습니다.", true);
+        if (!clientId || !topic) return log("clientId/topic을 입력하세요.", true);
+
+        // UI 상태 업데이트
+        subscribedTopics.add(topic);
+        renderTopics();
+
+        // 워커에 "topic 추가" 요청
+        worker.port.postMessage({
+            type: "connect",
+            clientId,
+            topic
+        });
+
+        log(`워커에 구독 요청: topic=${topic}`);
+    }
+
+    function removeTopic(topic) {
+        if (!worker) return log("워커가 초기화되지 않았습니다.", true);
+
+        subscribedTopics.delete(topic);
+        renderTopics();
+
+        worker.port.postMessage({
+            type: "disconnectTopic",
+            topic
+        });
+
+        log(`워커에 구독 해제 요청: topic=${topic}`);
+    }
+
+    function disconnectAll() {
+        if (!worker) return log("워커가 초기화되지 않았습니다.", true);
+
+        subscribedTopics.clear();
+        renderTopics();
+
+        worker.port.postMessage({ type: "disconnectAll" });
+        log("워커 SSE 전체 종료 요청");
+    }
+
+    // =========================
+    // 발신 API
+    // =========================
+    async function send() {
+        const from = document.getElementById('from').value.trim();
+        const topic = document.getElementById('sendTopic').value.trim();
+        const message = document.getElementById('message').value.trim();
+
+        if (!topic || !message) return log("sendTopic/message를 입력하세요.", true);
+
+        const res = await fetch('/api/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ topic, message, from })
+        });
+
+        log(`발신 결과: HTTP ${res.status}`);
+    }
+
+    async function broadcast() {
+        const message = document.getElementById('message').value.trim();
+        if (!message) return log("message를 입력하세요.", true);
+
+        const res = await fetch(`/api/broadcast?message=${encodeURIComponent(message)}`, {
+            method: 'POST'
+        });
+
+        log(`브로드캐스트 결과: HTTP ${res.status}`);
+    }
+
+    // =========================
+    // 이벤트 바인딩
+    // =========================
+    document.getElementById('btnConnect').onclick = addTopic;
+    document.getElementById('btnDisconnectAll').onclick = disconnectAll;
+    document.getElementById('btnSend').onclick = send;
+    document.getElementById('btnBroadcast').onclick = broadcast;
+    document.getElementById('btnClear').onclick = () => (logEl.textContent = '');
+
+    // =========================
+    // 초기화
+    // =========================
+    initWorker();
+    renderTopics();
+</script>
+</body>
+</html>

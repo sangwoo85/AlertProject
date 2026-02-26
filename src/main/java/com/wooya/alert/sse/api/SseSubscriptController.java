@@ -29,7 +29,7 @@ public class SseSubscriptController {
             @RequestParam String clientId,
             @RequestParam String topic
     ){
-        //log.info("START [ {} ] [ {} ]", clientId, topic);
+        log.info("START [ {} ] [ {} ]", clientId, topic);
 
         //여기서 0L 은 무제한
         SseEmitter emitter = new SseEmitter(0L);

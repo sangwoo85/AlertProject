@@ -19,12 +19,11 @@ public class SseSendController {
     // topic 으로 발신 (서버 -> 해당 topic 구독자)
     @PostMapping("/api/send")
     public Map<String, Object> send(@RequestBody @Valid SseRequestDto req) {
-
-        repo.sendToTopic(req.topic(), "message", Map.of(
-                "topic", req.topic(),
-                "from", req.from() == null ? "anonymous" : req.from(),
-                "message", req.message(),
-                "at", Instant.now().toString()
+        repo.sendToTopic(req.topic(), "message", new SseMessageDto(
+                req.topic(),
+                req.from() == null ? "anonymous" : req.from(),
+                req.message(),
+                Instant.now().toString()
         ));
 
         return Map.of("ok", true);
@@ -42,7 +41,7 @@ public class SseSendController {
     @PostMapping("/api/broadcast/timer")
     public Map<String, Object> broadcastTimer(@RequestParam String timer) {
         int sleepTime =  Integer.valueOf(timer);
-        for(int i = 0; i < 1000;i++){
+        for(int i = 0; i < 100;i++){
             try {
                 Thread.sleep(sleepTime);
             } catch (InterruptedException e) {

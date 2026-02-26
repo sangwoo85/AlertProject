@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SSE Non-Shared Demo</title>
+    <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+<main class="page">
+    <header class="hero">
+        <h2>SSE 데모 (탭별 직접 연결, Non-Shared)</h2>
+        <p class="hero-note">
+            이 페이지는 SharedWorker를 사용하지 않습니다.
+            각 탭에서 접속 버튼을 누를 때마다 개별 SSE 연결이 생성됩니다.
+        </p>
+    </header>
+
+    <div class="box">
+        <h3>1) SSE 연결</h3>
+        <div class="row">
+            <label>clientId</label>
+            <input id="clientId" />
+            <label>topic</label>
+            <input id="topic" value="roomA" />
+            <button id="btnConnect">SSE 접속</button>
+            <button id="btnDisconnect" class="btn-danger">SSE 종료</button>
+        </div>
+        <div class="muted">
+            * 접속 버튼 클릭 시 `/sse/subscribe`를 호출해 현재 탭에 EventSource를 생성합니다.
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>2) 발신(POST)</h3>
+        <div class="row">
+            <label>from</label>
+            <input id="from" value="상우님" />
+            <label>sendTopic</label>
+            <input id="sendTopic" value="roomA" />
+        </div>
+        <div class="row">
+            <label>message</label>
+            <input id="message" class="input-message" value="안녕하세요 SSE!" />
+            <button id="btnSend">발신 (/api/send)</button>
+            <button id="btnBroadcast" class="btn-secondary">브로드캐스트 (/api/broadcast)</button>
+        </div>
+        <div class="row">
+            <label>interval(ms)</label>
+            <input id="timer" value="1000" />
+            <button id="btnBroadcastTimer" class="btn-secondary">interval 전송 (/api/broadcast/timer)</button>
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>3) 수신 로그</h3>
+        <div class="row">
+            <button id="btnClear" class="btn-secondary">로그 지우기</button>
+        </div>
+        <div id="log"></div>
+    </div>
+</main>
+
+<script>
+    const logEl = document.getElementById("log");
+    let eventSource = null;
+
+    function log(line, isError = false) {
+        const now = new Date().toLocaleTimeString();
+        const prefix = isError ? "[ERR]" : "";
+        logEl.textContent += `[${now}]${prefix} ${line}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function defaultClientId() {
+        if (window.crypto && crypto.randomUUID) {
+            return `client-${crypto.randomUUID().slice(0, 8)}`;
+        }
+        return `client-${Date.now()}`;
+    }
+
+    function handleSseEvent(eventName, event, fallbackTopic) {
+        let payload = event.data;
+        try {
+            payload = JSON.parse(event.data);
+        } catch (_) {
+            // plain text도 허용
+        }
+
+        const topic = payload && payload.topic ? payload.topic : fallbackTopic;
+        const message = payload && payload.message ? payload.message : event.data;
+        log(`[recv][${topic || "-"}][${eventName}] ${message}`);
+    }
+
+    function connectSse() {
+        const clientId = document.getElementById("clientId").value.trim();
+        const topic = document.getElementById("topic").value.trim();
+
+        if (!clientId || !topic) return log("clientId/topic을 입력하세요.", true);
+
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+
+        eventSource = new EventSource(
+            `/sse/subscribe?clientId=${encodeURIComponent(clientId)}&topic=${encodeURIComponent(topic)}`
+        );
+
+        eventSource.onopen = () => log(`SSE 연결 완료: clientId=${clientId}, topic=${topic}`);
+        eventSource.onmessage = (event) => handleSseEvent("message", event, topic);
+        eventSource.addEventListener("connected", (event) => handleSseEvent("connected", event, topic));
+        eventSource.addEventListener("broadcast", (event) => handleSseEvent("broadcast", event, topic));
+        eventSource.onerror = () => log(`SSE 오류: topic=${topic}`, true);
+    }
+
+    function disconnectSse() {
+        if (!eventSource) return;
+        eventSource.close();
+        eventSource = null;
+        log("SSE 연결 종료");
+    }
+
+    async function send() {
+        const from = document.getElementById("from").value.trim();
+        const topic = document.getElementById("sendTopic").value.trim();
+        const message = document.getElementById("message").value.trim();
+        if (!topic || !message) return log("sendTopic/message를 입력하세요.", true);
+
+        const res = await fetch("/api/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ topic, message, from })
+        });
+        log(`발신 결과: HTTP ${res.status}`);
+    }
+
+    async function broadcast() {
+        const message = document.getElementById("message").value.trim();
+        if (!message) return log("message를 입력하세요.", true);
+
+        const res = await fetch(`/api/broadcast?message=${encodeURIComponent(message)}`, {
+            method: "POST"
+        });
+        log(`브로드캐스트 결과: HTTP ${res.status}`);
+    }
+
+    async function broadcastTimer() {
+        const timer = document.getElementById("timer").value.trim();
+        if (!timer || Number.isNaN(Number(timer))) {
+            return log("interval(ms)에 숫자를 입력하세요.", true);
+        }
+
+        const res = await fetch(`/api/broadcast/timer?timer=${encodeURIComponent(timer)}`, {
+            method: "POST"
+        });
+        log(`interval 브로드캐스트 결과: HTTP ${res.status}`);
+    }
+
+    document.getElementById("btnConnect").onclick = connectSse;
+    document.getElementById("btnDisconnect").onclick = disconnectSse;
+    document.getElementById("btnSend").onclick = send;
+    document.getElementById("btnBroadcast").onclick = broadcast;
+    document.getElementById("btnBroadcastTimer").onclick = broadcastTimer;
+    document.getElementById("btnClear").onclick = () => (logEl.textContent = "");
+
+    document.getElementById("clientId").value = defaultClientId();
+</script>
+</body>
+</html>

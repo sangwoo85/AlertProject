@@ -3,311 +3,66 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SSE SharedWorker Demo</title>
-    <style>
-        :root {
-            --bg-top: #f6fbff;
-            --bg-bottom: #eef2ff;
-            --panel-bg: #ffffff;
-            --text: #182235;
-            --muted: #5f6f86;
-            --line: #dde6f4;
-            --primary: #1d6cff;
-            --primary-strong: #1056d8;
-            --danger: #d12f4c;
-            --danger-strong: #af243d;
-            --shadow: 0 18px 40px rgba(16, 49, 110, 0.1);
-            --radius-lg: 18px;
-            --radius-md: 12px;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            color: var(--text);
-            font-family: "Pretendard", "SUIT", "Noto Sans KR", sans-serif;
-            background:
-                radial-gradient(circle at 10% 0%, rgba(71, 131, 255, 0.22), transparent 34%),
-                radial-gradient(circle at 95% 10%, rgba(103, 221, 189, 0.22), transparent 30%),
-                linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
-            padding: 28px 18px 40px;
-        }
-
-        .page {
-            width: min(1280px, 100%);
-            margin: 0 auto;
-            min-height: calc(100vh - 68px);
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 16px;
-        }
-
-        .left-pane {
-            min-height: 0;
-        }
-
-        .right-pane {
-            min-height: 0;
-            overflow: auto;
-            padding-right: 4px;
-        }
-
-        .hero {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(6px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: var(--shadow);
-            border-radius: var(--radius-lg);
-            padding: 22px 24px;
-            margin-bottom: 16px;
-        }
-
-        .log-box {
-            margin-top: 0;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        h2 {
-            margin: 0 0 8px;
-            font-size: 1.48rem;
-            letter-spacing: -0.01em;
-        }
-
-        .hero-note {
-            margin: 0;
-            color: var(--muted);
-            line-height: 1.5;
-            font-size: 0.94rem;
-        }
-
-        .box {
-            background: var(--panel-bg);
-            border: 1px solid var(--line);
-            border-radius: var(--radius-lg);
-            padding: 16px;
-            margin-top: 14px;
-            box-shadow: 0 8px 20px rgba(24, 34, 53, 0.06);
-        }
-
-        h3 {
-            margin: 0 0 14px;
-            font-size: 1.02rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        h3::before {
-            content: "";
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: linear-gradient(140deg, #5ab4ff, #3f7cff);
-            box-shadow: 0 0 0 4px rgba(63, 124, 255, 0.16);
-        }
-
-        .row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        label {
-            font-size: 0.86rem;
-            color: #3e4e66;
-            font-weight: 600;
-            min-width: 62px;
-        }
-
-        input {
-            border: 1px solid #cad7ec;
-            background: #fdfdff;
-            border-radius: 10px;
-            padding: 9px 11px;
-            min-width: 140px;
-            color: var(--text);
-            font-size: 0.92rem;
-            transition: border-color .2s ease, box-shadow .2s ease;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(29, 108, 255, 0.12);
-        }
-
-        .input-message {
-            width: min(520px, 100%);
-        }
-
-        button {
-            border: 1px solid transparent;
-            border-radius: 10px;
-            padding: 8px 13px;
-            font-weight: 600;
-            cursor: pointer;
-            color: #fff;
-            background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-            transition: transform .12s ease, filter .2s ease;
-        }
-
-        button:hover {
-            filter: brightness(1.04);
-        }
-
-        button:active {
-            transform: translateY(1px);
-        }
-
-        button:focus-visible {
-            outline: none;
-            box-shadow: 0 0 0 4px rgba(29, 108, 255, 0.18);
-        }
-
-        .btn-secondary {
-            background: #f3f7ff;
-            color: #2a426e;
-            border-color: #c4d5f3;
-        }
-
-        .btn-danger {
-            background: linear-gradient(140deg, var(--danger), var(--danger-strong));
-        }
-
-        #log {
-            white-space: pre-wrap;
-            background: #0f1b34;
-            color: #d9e4ff;
-            font-family: "JetBrains Mono", "D2Coding", "Consolas", monospace;
-            padding: 12px;
-            flex: 1;
-            min-height: 0;
-            overflow: auto;
-            border-radius: var(--radius-md);
-            border: 1px solid #1c2c52;
-            line-height: 1.4;
-            font-size: 0.86rem;
-        }
-
-        #subs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 8px 5px 11px;
-            border: 1px solid #c8d6f0;
-            border-radius: 999px;
-            background: #f4f8ff;
-            color: #24466f;
-            font-size: 0.88rem;
-        }
-
-        .tag button {
-            padding: 0;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            font-size: 0.74rem;
-            background: #fff;
-            color: #335279;
-            border: 1px solid #bdd0f1;
-        }
-
-        .muted {
-            color: var(--muted);
-            font-size: 0.83rem;
-            line-height: 1.45;
-        }
-
-        @media (max-width: 700px) {
-            body { padding: 18px 12px 28px; }
-            .page {
-                min-height: auto;
-                display: block;
-            }
-            .left-pane { margin-bottom: 14px; }
-            .right-pane {
-                overflow: visible;
-                padding-right: 0;
-            }
-            .log-box { height: auto; }
-            #log { min-height: 280px; }
-            .hero { padding: 18px 16px; }
-            .box { padding: 14px; }
-            .row { margin-bottom: 12px; }
-            input { width: 100%; }
-            label { min-width: auto; }
-            .input-message { width: 100%; }
-        }
-    </style>
+    <title>Kakao Style SSE Demo</title>
+    <link rel="stylesheet" href="index.css" />
 </head>
 <body>
 <main class="page">
-    <section class="left-pane">
-        <div class="box log-box">
-            <h3>3) 수신 로그</h3>
-            <div class="row">
-                <button id="btnClear" class="btn-secondary">로그 지우기</button>
-            </div>
-            <div id="log"></div>
-        </div>
-    </section>
+    <header class="hero">
+        <h2>SSE 데모 (SharedWorker: 탭별 SSE 연결 관리)</h2>
+        <p class="hero-note">
+            같은 브라우저에서 여러 탭을 열면 탭별로 SSE 연결을 관리하며, 수신 메시지는 해당 탭에만 전달됩니다.
+            발신은 POST API로 테스트할 수 있습니다.
+        </p>
+    </header>
 
-    <section class="right-pane">
-        <header class="hero">
-            <h2>SSE 데모 (SharedWorker: 단일 SSE 연결 공유)</h2>
-            <p class="hero-note">
-                같은 브라우저에서 여러 탭을 열어도 SSE 연결을 1개로 공유하고, 수신 메시지는 모든 탭에 브로드캐스트됩니다.
-                발신은 POST API로 테스트할 수 있습니다.
-            </p>
-        </header>
-
-        <div class="box">
-            <h3>1) SSE 연결/구독</h3>
-            <div class="row">
-                <label>clientId</label>
-                <input id="clientId" value="client-1" />
-                <label>topic</label>
-                <input id="topic" value="roomA" />
-                <button id="btnConnect">구독 추가(워커에 요청)</button>
-                <button id="btnDisconnectAll" class="btn-danger">워커 SSE 종료</button>
-            </div>
-            <div class="row">
-                <div>현재 구독 요청(topic):</div>
-                <div id="subs"></div>
-            </div>
-            <div class="muted">
-                * SharedWorker는 SSE 연결을 1개로 유지하고, 수신 이벤트를 모든 탭에 브로드캐스트합니다.
-            </div>
+    <div class="box">
+        <h3>1) SSE 연결/구독</h3>
+        <div class="row">
+            <label>clientId</label>
+            <input id="clientId" value="client-1" />
+            <label>topic</label>
+            <input id="topic" value="roomA" />
+            <button id="btnConnect">구독 추가(워커에 요청)</button>
+            <button id="btnDisconnectAll" class="btn-danger">워커 SSE 종료</button>
         </div>
-
-        <div class="box">
-            <h3>2) 발신(POST)</h3>
-            <div class="row">
-                <label>from</label>
-                <input id="from" value="상우님" />
-                <label>sendTopic</label>
-                <input id="sendTopic" value="roomA" />
-            </div>
-            <div class="row">
-                <label>message</label>
-                <input id="message" class="input-message" value="안녕하세요 SSE!" />
-                <button id="btnSend">발신 (/api/send)</button>
-                <button id="btnBroadcast" class="btn-secondary">브로드캐스트 (/api/broadcast)</button>
-            </div>
+        <div class="row">
+            <div>현재 구독 요청(topic):</div>
+            <div id="subs"></div>
         </div>
-    </section>
+        <div class="muted">
+            * 각 탭은 요청한 topic으로 별도 SSE 연결을 생성합니다.
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>2) 발신(POST)</h3>
+        <div class="row">
+            <label>from</label>
+            <input id="from" value="상우님" />
+            <label>sendTopic</label>
+            <input id="sendTopic" value="roomA" />
+        </div>
+        <div class="row">
+            <label>message</label>
+            <input id="message" class="input-message" value="안녕하세요 SSE!" />
+            <button id="btnSend">발신 (/api/send)</button>
+            <button id="btnBroadcast" class="btn-secondary">브로드캐스트 (/api/broadcast)</button>
+        </div>
+        <div class="row">
+            <label>interval(ms)</label>
+            <input id="timer" value="1000" />
+            <button id="btnBroadcastTimer" class="btn-secondary">interval 전송 (/api/broadcast/timer)</button>
+        </div>
+    </div>
+
+    <div class="box">
+        <h3>3) 수신 로그</h3>
+        <div class="row">
+            <button id="btnClear" class="btn-secondary">로그 지우기</button>
+        </div>
+        <div id="log"></div>
+    </div>
 </main>
 
 <script>
@@ -330,21 +85,26 @@
     let worker;
     let subscribedTopics = new Set();
 
+    /**
+     * SharedWorker를 초기화하고 워커 -> UI 메시지 수신 핸들러를 연결한다.
+     *
+     * 동작:
+     * 1) SharedWorker 인스턴스를 생성하고 포트를 시작한다.
+     * 2) 워커가 전달한 메시지 타입(message/error/unknown)에 따라 로그를 출력한다.
+     * 3) 브라우저가 SharedWorker를 지원하지 않거나 로드에 실패하면 에러 로그를 남긴다.
+     */
     function initWorker() {
         try {
             worker = new SharedWorker("sse-shared-worker.js");
             worker.port.start();
 
+            // 워커에서 전달되는 이벤트를 UI 로그 포맷으로 변환해 출력
             worker.port.onmessage = (event) => {
                 const msg = event.data;
                 // msg: {type, ...}
                 if (!msg || !msg.type) return;
 
                 switch (msg.type) {
-                    case "status":
-                        log(`[worker][status] ${msg.data}`);
-                        break;
-
                     case "message":
                         // { type:"message", topic, eventName, data }
                         log(`[recv][${msg.topic || "-"}][${msg.eventName || "message"}] ${msg.data}`);
@@ -371,12 +131,6 @@
             const tag = document.createElement('span');
             tag.className = 'tag';
             tag.innerHTML = `<strong>${topic}</strong>`;
-
-            const btn = document.createElement('button');
-            btn.textContent = 'X';
-            btn.onclick = () => removeTopic(topic);
-
-            tag.appendChild(btn);
             subsEl.appendChild(tag);
         });
     }
@@ -403,20 +157,6 @@
         });
 
         log(`워커에 구독 요청: topic=${topic}`);
-    }
-
-    function removeTopic(topic) {
-        if (!worker) return log("워커가 초기화되지 않았습니다.", true);
-
-        subscribedTopics.delete(topic);
-        renderTopics();
-
-        worker.port.postMessage({
-            type: "disconnectTopic",
-            topic
-        });
-
-        log(`워커에 구독 해제 요청: topic=${topic}`);
     }
 
     function disconnectAll() {
@@ -459,6 +199,19 @@
         log(`브로드캐스트 결과: HTTP ${res.status}`);
     }
 
+    async function broadcastTimer() {
+        const timer = document.getElementById('timer').value.trim();
+        if (!timer || Number.isNaN(Number(timer))) {
+            return log("interval(ms)에 숫자를 입력하세요.", true);
+        }
+
+        const res = await fetch(`/api/broadcast/timer?timer=${encodeURIComponent(timer)}`, {
+            method: 'POST'
+        });
+
+        log(`interval 브로드캐스트 결과: HTTP ${res.status}`);
+    }
+
     // =========================
     // 이벤트 바인딩
     // =========================
@@ -466,6 +219,7 @@
     document.getElementById('btnDisconnectAll').onclick = disconnectAll;
     document.getElementById('btnSend').onclick = send;
     document.getElementById('btnBroadcast').onclick = broadcast;
+    document.getElementById('btnBroadcastTimer').onclick = broadcastTimer;
     document.getElementById('btnClear').onclick = () => (logEl.textContent = '');
 
     // =========================

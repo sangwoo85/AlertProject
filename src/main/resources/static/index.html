@@ -36,8 +36,22 @@
         }
 
         .page {
-            width: min(980px, 100%);
+            width: min(1280px, 100%);
             margin: 0 auto;
+            min-height: calc(100vh - 68px);
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 16px;
+        }
+
+        .left-pane {
+            min-height: 0;
+        }
+
+        .right-pane {
+            min-height: 0;
+            overflow: auto;
+            padding-right: 4px;
         }
 
         .hero {
@@ -48,6 +62,13 @@
             border-radius: var(--radius-lg);
             padding: 22px 24px;
             margin-bottom: 16px;
+        }
+
+        .log-box {
+            margin-top: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         h2 {
@@ -165,7 +186,8 @@
             color: #d9e4ff;
             font-family: "JetBrains Mono", "D2Coding", "Consolas", monospace;
             padding: 12px;
-            height: 340px;
+            flex: 1;
+            min-height: 0;
             overflow: auto;
             border-radius: var(--radius-md);
             border: 1px solid #1c2c52;
@@ -210,6 +232,17 @@
 
         @media (max-width: 700px) {
             body { padding: 18px 12px 28px; }
+            .page {
+                min-height: auto;
+                display: block;
+            }
+            .left-pane { margin-bottom: 14px; }
+            .right-pane {
+                overflow: visible;
+                padding-right: 0;
+            }
+            .log-box { height: auto; }
+            #log { min-height: 280px; }
             .hero { padding: 18px 16px; }
             .box { padding: 14px; }
             .row { margin-bottom: 12px; }
@@ -221,56 +254,60 @@
 </head>
 <body>
 <main class="page">
-    <header class="hero">
-        <h2>SSE 데모 (SharedWorker: 단일 SSE 연결 공유)</h2>
-        <p class="hero-note">
-            같은 브라우저에서 여러 탭을 열어도 SSE 연결을 1개로 공유하고, 수신 메시지는 모든 탭에 브로드캐스트됩니다.
-            발신은 POST API로 테스트할 수 있습니다.
-        </p>
-    </header>
+    <section class="left-pane">
+        <div class="box log-box">
+            <h3>3) 수신 로그</h3>
+            <div class="row">
+                <button id="btnClear" class="btn-secondary">로그 지우기</button>
+            </div>
+            <div id="log"></div>
+        </div>
+    </section>
 
-    <div class="box">
-        <h3>1) SSE 연결/구독</h3>
-        <div class="row">
-            <label>clientId</label>
-            <input id="clientId" value="client-1" />
-            <label>topic</label>
-            <input id="topic" value="roomA" />
-            <button id="btnConnect">구독 추가(워커에 요청)</button>
-            <button id="btnDisconnectAll" class="btn-danger">워커 SSE 종료</button>
-        </div>
-        <div class="row">
-            <div>현재 구독 요청(topic):</div>
-            <div id="subs"></div>
-        </div>
-        <div class="muted">
-            * SharedWorker는 SSE 연결을 1개로 유지하고, 수신 이벤트를 모든 탭에 브로드캐스트합니다.
-        </div>
-    </div>
+    <section class="right-pane">
+        <header class="hero">
+            <h2>SSE 데모 (SharedWorker: 단일 SSE 연결 공유)</h2>
+            <p class="hero-note">
+                같은 브라우저에서 여러 탭을 열어도 SSE 연결을 1개로 공유하고, 수신 메시지는 모든 탭에 브로드캐스트됩니다.
+                발신은 POST API로 테스트할 수 있습니다.
+            </p>
+        </header>
 
-    <div class="box">
-        <h3>2) 발신(POST)</h3>
-        <div class="row">
-            <label>from</label>
-            <input id="from" value="상우님" />
-            <label>sendTopic</label>
-            <input id="sendTopic" value="roomA" />
+        <div class="box">
+            <h3>1) SSE 연결/구독</h3>
+            <div class="row">
+                <label>clientId</label>
+                <input id="clientId" value="client-1" />
+                <label>topic</label>
+                <input id="topic" value="roomA" />
+                <button id="btnConnect">구독 추가(워커에 요청)</button>
+                <button id="btnDisconnectAll" class="btn-danger">워커 SSE 종료</button>
+            </div>
+            <div class="row">
+                <div>현재 구독 요청(topic):</div>
+                <div id="subs"></div>
+            </div>
+            <div class="muted">
+                * SharedWorker는 SSE 연결을 1개로 유지하고, 수신 이벤트를 모든 탭에 브로드캐스트합니다.
+            </div>
         </div>
-        <div class="row">
-            <label>message</label>
-            <input id="message" class="input-message" value="안녕하세요 SSE!" />
-            <button id="btnSend">발신 (/api/send)</button>
-            <button id="btnBroadcast" class="btn-secondary">브로드캐스트 (/api/broadcast)</button>
-        </div>
-    </div>
 
-    <div class="box">
-        <h3>3) 수신 로그</h3>
-        <div class="row">
-            <button id="btnClear" class="btn-secondary">로그 지우기</button>
+        <div class="box">
+            <h3>2) 발신(POST)</h3>
+            <div class="row">
+                <label>from</label>
+                <input id="from" value="상우님" />
+                <label>sendTopic</label>
+                <input id="sendTopic" value="roomA" />
+            </div>
+            <div class="row">
+                <label>message</label>
+                <input id="message" class="input-message" value="안녕하세요 SSE!" />
+                <button id="btnSend">발신 (/api/send)</button>
+                <button id="btnBroadcast" class="btn-secondary">브로드캐스트 (/api/broadcast)</button>
+            </div>
         </div>
-        <div id="log"></div>
-    </div>
+    </section>
 </main>
 
 <script>
